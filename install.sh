@@ -1,7 +1,7 @@
 download() {
     echo "Downloading version: " $1
     curl -fsSL https://github.com/dimchee/prochrome/releases/download/$1/prochrome --output prochrome
-    mkdir -p target/release/
+    mkdir -p target/debug/
     mv -f prochrome target/debug/
     chmod a+x target/debug/prochrome
     echo "All done :D"
