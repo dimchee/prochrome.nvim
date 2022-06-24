@@ -14,8 +14,6 @@ jobs:
     runs-on: ubuntu-20.04
     
     steps:
-    - name: Install Openssl
-      run: apt-get install libssl-dev
     - uses: actions/checkout@v2
     - name: Build
       run: cargo build --target x86_64-unknown-linux-gnu --release --verbose && mv ./target/x86_64-unknown-linux-gnu/release/prochrome .
