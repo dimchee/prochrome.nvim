@@ -1,0 +1,30 @@
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -C target-feature=+crt-static
+
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-20.04
+    
+    steps:
+    - name: Install Openssl
+      run: apt-get install libssl-dev
+    - uses: actions/checkout@v2
+    - name: Build
+      run: cargo build --target x86_64-unknown-linux-gnu --release --verbose && mv ./target/x86_64-unknown-linux-gnu/release/prochrome .
+
+    - name: Upload
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: prochrome 
+        tag: ${{github.ref}}
+        overwrite: false
+        body: "Automated publish by Github Action"

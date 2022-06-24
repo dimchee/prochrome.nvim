@@ -1,0 +1,13 @@
+[package]
+name = "prochrome"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+headless_chrome = { git = "https://github.com/atroche/rust-headless-chrome", tag = "v1.0.0", default-features = false }
+nvim-rs = { version = "0.4", features = [ "use_async-std" ] }
+async-std = { version = "1.12", features = ["attributes"] }
+anyhow = "1.0"
+async-trait = "0.1"
