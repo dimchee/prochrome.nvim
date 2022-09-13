@@ -4,7 +4,7 @@ use async_std;
 use nvim_rs::{create::async_std as create, Handler, Value, Neovim};
 use std::{ffi::OsString, sync::{Arc, Mutex}, time::Duration};
 
-use headless_chrome::LaunchOptions;
+use headless_chrome::{LaunchOptions, protocol::cdp::Target::CreateTarget};
 
 #[derive(Clone)]
 struct Browser {
@@ -23,6 +23,19 @@ impl Browser {
             .reload(true, None).map_err(|err| err.to_string())?;
         Ok(())
     }
+    fn status(&self) -> String {
+        if self.browser.is_some() {
+            "Chrome is running, everything good :D"
+        } else {
+            "No chrome running :P"
+        } .to_string()
+    }
+    fn get_tabs(&self) -> Result<Vec<String>, String> {
+        Ok(self.browser.as_ref()
+            .ok_or("No browser")?
+            .get_tabs().lock().ok().ok_or("Could not get tabs")?.iter()
+            .map(|t| t.get_url()).collect::<Vec<String>>())
+    }
 
     fn new_app(&mut self, link: &str) -> Result<(), String> {
         let mut app = OsString::from("--app=");
@@ -40,6 +53,37 @@ impl Browser {
         self.browser = Some(headless_chrome::Browser::new(opts)
             .map(|x| Arc::new(x))
             .map_err(|_| "chrome browser couldn't start")?);
+        Ok(())
+    }
+    fn new_chrome(&mut self, link: &str) -> Result<(), String> {
+        let mut opts = LaunchOptions::default_builder()
+            .headless(false)
+            // strange workaround for not-closing connection
+            .idle_browser_timeout(Duration::new(u64::MAX, 0))
+            .build()
+            .expect("Could not find chrome-executable");
+        let link_str = OsString::from(link);
+        opts.args.push(&link_str);
+        opts.disable_default_args = true;
+        opts.ignore_certificate_errors = false;
+        // opts.args.push(OsStr::new("--enable-experimental-ui-automation"));
+        self.browser = Some(headless_chrome::Browser::new(opts)
+            .map(|x| Arc::new(x))
+            .map_err(|_| "chrome browser couldn't start")?);
+        Ok(())
+    }
+    fn new_tab(&mut self) -> Result<(), String> {
+        let _new_tab = self.browser.as_ref()
+            .ok_or("No browser")?
+            .new_tab_with_options(CreateTarget {
+                url: "chrome://version".to_string(),
+                width: None,
+                height: None, 
+                browser_context_id: None,
+                enable_begin_frame_control: None,
+                new_window: Some(false),
+                background: None
+            });
         Ok(())
     }
 }
@@ -68,7 +112,7 @@ impl Handler for EventHandler {
                     .refresh()?;
                 Ok(Value::from("Refreshed!"))
             }
-            "newapp" => {
+            "new_app" => {
                 if let [Value::String(raw_link)] = &args[..] {
                     let link = raw_link.as_str().ok_or(Value::from("Argument is not valid string!"))?;
                     self.chrome
@@ -76,11 +120,37 @@ impl Handler for EventHandler {
                         .new_app(link)?;
                     Ok(Value::from("Opened New App"))
                 } else {
-                    Err(Value::from("Wrong args to newapp, usage: newapp <link>"))
+                    Err(Value::from("Wrong args to new_app, usage: new_app <link>"))
+                }
+            },
+            "new_chrome" => {
+                if let [Value::String(raw_link)] = &args[..] {
+                    let link = raw_link.as_str().ok_or(Value::from("Argument is not valid string!"))?;
+                    self.chrome
+                        .try_lock().map_err(|_| Value::from("Could not lock browser :P"))?
+                        .new_chrome(link)?;
+                    Ok(Value::from("Opened New Chrome"))
+                } else {
+                    Err(Value::from("Wrong args to new_chrome, usage: new_app <link>"))
                 }
             },
             "status" => {
-                Ok(Value::from("good :D"))
+                Ok(Value::from(self.chrome
+                    .try_lock().map_err(|_| Value::from("Could not lock browser :P"))?
+                    .status()
+                ))
+            }
+            "get_tabs" => {
+                Ok(Value::from(self.chrome
+                    .try_lock().map_err(|_| Value::from("Could not lock browser :P"))?
+                    .get_tabs()?.into_iter().map(|x| Value::from(x)).collect::<Vec<_>>()
+                ))
+            }
+            "new_tab" => {
+                self.chrome
+                    .try_lock().map_err(|_| Value::from("Could not lock browser :P"))?
+                    .new_tab()?;
+                Ok(Value::from("Opened new tab!"))
             }
             _ => {
                 Ok(Value::from("Unknown command!"))

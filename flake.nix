@@ -2,7 +2,7 @@
   outputs = { self, nixpkgs }: {
     devShell.x86_64-linux = with import nixpkgs { system = "x86_64-linux"; };
       mkShell {
-        buildInputs = [ cargo rustc pkg-config openssl chromium ];
+        buildInputs = [ cargo rustc pkg-config openssl chromium rust-analyzer ];
         RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
       };
     defaultPackage.x86_64-linux = with import nixpkgs { system = "x86_64-linux"; };

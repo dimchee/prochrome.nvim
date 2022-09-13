@@ -4,7 +4,7 @@
 package.loaded['dev'] = nil
 package.loaded['prochrome'] = nil
 package.loaded['websocket'] = nil
-vim.cmd[[set rtp+=.]]
+vim.o.rtp = ".," .. vim.o.rtp
 
 vim.keymap.set('n', ',,,', '<cmd>luafile lua/dev.lua<cr>')
 

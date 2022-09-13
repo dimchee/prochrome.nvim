@@ -7,11 +7,69 @@ Surprisingly, answer is YES :smile:
 
 ## Instalation
 
-Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
+Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
 ```lua
-use {'dimchee/prochrome', run = 'bash install.sh' }
+use {'dimchee/prochrome.nvim', run = 'bash install.sh' }
 ```
 **Don't forget to install chrome or chromium!!!**
+
+## Usage
+
+### Live Server
+
+You can run your favourite
+[live server tool](https://github.com/wking-io/elm-live) directly from prochrome.
+I recommend, for example adding following keymap to your `after/ftplugin/elm.lua` config file
+```lua
+vim.keymap.set('n', '<C-a>',
+  require'prochrome'.run {
+    cmd = {'elm-live', 'src/Main.elm', '--', '--debug'},
+    url = 'http://localhost:8000'
+  },
+  { silent = true }
+)
+```
+If you prefer compiling (or writing) to plain html files, we got you covered too:
+```lua
+vim.keymap.set('n', '<C-a>',
+  require'prochrome'.runAndRefresh {
+    cmd = {'pandoc', 'Readme.md', '-o', 'Readme.html'},
+    url = 'Readme.html'
+  },
+  { silent = true }
+)
+```
+
+
+
+### Preview Github Markdown
+
+It is as simple using
+[Github CLI](https://cli.github.com/) and
+[this extension](https://github.com/yusukebe/gh-markdown-preview).
+If you already have gh installed, you just need to run
+```
+gh extension install yusukebe/gh-markdown-preview
+```
+Add binding to your lua config, and you are done:
+```lua
+vim.keymap.set('n', '<C-a>',
+  require'prochrome'.run {
+    cmd = {'gh', 'markdown-preview', '--disable-auto-open'},
+    url = 'http://localhost:3333'
+  },
+  { silent = true }
+)
+```
+
+### View live Documentation
+
+How to use cargo doc...
+
+### Look web through telescope
+
+- telescope.nvim + prochrome.nvim = caboom
+- Implement google search + telescope
 
 ## Future Plans
 
@@ -21,7 +79,6 @@ but that would mean we need some kind of websocket library
 [here](https://github.com/jbyuki/instant.nvim),
 but i couldn't make it to work in this context.
 
-- Implement google search + telescope?
 ### Maybe useful to expose from headless-chrome
 - [interception](https://docs.rs/headless_chrome/latest/headless_chrome/browser/tab/struct.Tab.html#method.enable_request_interception)
 - [get url](https://docs.rs/headless_chrome/latest/headless_chrome/browser/tab/struct.Tab.html#method.get_url) 
