@@ -37,9 +37,9 @@ impl Browser {
             .map(|t| t.get_url()).collect::<Vec<String>>())
     }
 
-    fn new_app(&mut self, link: &str) -> Result<(), String> {
+    fn new_app(&mut self, url: &str) -> Result<(), String> {
         let mut app = OsString::from("--app=");
-        app.push(link);
+        app.push(url);
         let mut opts = LaunchOptions::default_builder()
             .headless(false)
             // strange workaround for not-closing connection
@@ -55,15 +55,15 @@ impl Browser {
             .map_err(|_| "chrome browser couldn't start")?);
         Ok(())
     }
-    fn new_chrome(&mut self, link: &str) -> Result<(), String> {
+    fn new_chrome(&mut self, url: &str) -> Result<(), String> {
         let mut opts = LaunchOptions::default_builder()
             .headless(false)
             // strange workaround for not-closing connection
             .idle_browser_timeout(Duration::new(u64::MAX, 0))
             .build()
             .expect("Could not find chrome-executable");
-        let link_str = OsString::from(link);
-        opts.args.push(&link_str);
+        let url_str = OsString::from(url);
+        opts.args.push(&url_str);
         opts.disable_default_args = true;
         opts.ignore_certificate_errors = false;
         // opts.args.push(OsStr::new("--enable-experimental-ui-automation"));
@@ -84,6 +84,14 @@ impl Browser {
                 new_window: Some(false),
                 background: None
             });
+        Ok(())
+    }
+    fn navigate_to(&mut self, url: &str) -> Result<(), String> {
+        self.browser.as_ref()
+            .ok_or("No browser")?
+            .get_tabs().lock().ok().ok_or("Could not get tabs")?
+            .first().ok_or("No opened tabs available")?
+            .navigate_to(url).ok().ok_or("Could not navigate to url")?;
         Ok(())
     }
 }
@@ -113,25 +121,25 @@ impl Handler for EventHandler {
                 Ok(Value::from("Refreshed!"))
             }
             "new_app" => {
-                if let [Value::String(raw_link)] = &args[..] {
-                    let link = raw_link.as_str().ok_or(Value::from("Argument is not valid string!"))?;
+                if let [Value::String(raw_url)] = &args[..] {
+                    let url = raw_url.as_str().ok_or(Value::from("Argument is not valid string!"))?;
                     self.chrome
                         .try_lock().map_err(|_| Value::from("Could not lock browser :P"))?
-                        .new_app(link)?;
+                        .new_app(url)?;
                     Ok(Value::from("Opened New App"))
                 } else {
-                    Err(Value::from("Wrong args to new_app, usage: new_app <link>"))
+                    Err(Value::from("Wrong args to new_app, usage: new_app <url>"))
                 }
             },
             "new_chrome" => {
-                if let [Value::String(raw_link)] = &args[..] {
-                    let link = raw_link.as_str().ok_or(Value::from("Argument is not valid string!"))?;
+                if let [Value::String(raw_url)] = &args[..] {
+                    let url = raw_url.as_str().ok_or(Value::from("Argument is not valid string!"))?;
                     self.chrome
                         .try_lock().map_err(|_| Value::from("Could not lock browser :P"))?
-                        .new_chrome(link)?;
+                        .new_chrome(url)?;
                     Ok(Value::from("Opened New Chrome"))
                 } else {
-                    Err(Value::from("Wrong args to new_chrome, usage: new_app <link>"))
+                    Err(Value::from("Wrong args to new_chrome, usage: new_app <url>"))
                 }
             },
             "status" => {
@@ -152,6 +160,17 @@ impl Handler for EventHandler {
                     .new_tab()?;
                 Ok(Value::from("Opened new tab!"))
             }
+            "navigate_to" => {
+                if let [Value::String(raw_url)] = &args[..] {
+                    let url = raw_url.as_str().ok_or(Value::from("Argument is not valid string!"))?;
+                    self.chrome
+                        .try_lock().map_err(|_| Value::from("Could not lock browser :P"))?
+                        .navigate_to(url)?;
+                    Ok(Value::from("Navigated to".to_owned() + url))
+                } else {
+                    Err(Value::from("Wrong args to new_chrome, usage: new_app <url>"))
+                }
+            },
             _ => {
                 Ok(Value::from("Unknown command!"))
             }

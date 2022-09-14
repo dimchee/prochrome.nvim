@@ -14,40 +14,53 @@ function Chrome:new()
 	setmetatable(chrome, self)
 	return chrome
 end
-function Chrome:kill() vim.fn.jobstop( self.jobId ) end
-function Chrome:run(fn, ...) return vim.rpcrequest(self.jobId, fn, ...) end
-function Chrome:status()  return self:run'status'  end
-function Chrome:refresh() return self:run'refresh' end
-function Chrome:newApp(link) return self:run('new_app', link) end
-function Chrome:newChrome(link) return self:run('new_chrome', link) end
-function Chrome:getTabs() return self:run'get_tabs' end
-function Chrome:newTab()  return self:run'new_tab' end
+function Chrome:kill() vim.fn.jobstop(self.jobId) end
+function Chrome:cmd(fn, ...) return vim.rpcrequest(self.jobId, fn, ...) end
+function Chrome:status()  return self:cmd'status'  end
+function Chrome:refresh() return self:cmd'refresh' end
+function Chrome:newApp(url) return self:cmd('new_app', url) end
+function Chrome:navigateTo(url) return self:cmd('navigate_to', url) end
+-- Not usable yet, maybe even unnecesery
+-- function Chrome:newChrome(url) return self:cmd('new_chrome', url) end
+-- function Chrome:getTabs() return self:cmd'get_tabs' end
+-- function Chrome:newTab()  return self:cmd'new_tab' end
 
 local M = {}
-function M:chrome()
-	if not self._chrome then
-		self._chrome = Chrome:new()
-	end
-	return self._chrome
-end
-function M:killChrome() self._chrome = self._chrome:kill() end
 
 local function argsValid(opts)
 	if type(opts) ~= 'table'
-		or type(opts.cmd) ~= 'table'
+		or opts.onStart and type(opts.onStart) ~= 'table'
+		or opts.onRefresh and type(opts.onRefresh) ~= 'table'
 		or type(opts.url) ~= 'string'
 	then
-		print'need table arg of shape { cmd : list<string>, url : string }'
+		print[[need table arg of shape {
+			onStart : list<string>, -- optional
+			onRefresh : list<string>, -- optional
+			url : string 
+		}]]
 		return false
 	end
 	return true
 end
 
-function M:runOrRefresh(opts)
-	if not argsValid() then return end
-  vim.fn.jobstart(opts.cmd)
-	return self:chrome() and self:chrome():refresh()
-		or self:newChrome():newapp(opts.url)
+function M.newApp(opts)
+	if not argsValid(opts) then return end
+	return {
+		get = function(self)
+			if not self.chrome then
+				if opts.onStart then vim.fn.jobstart(opts.onStart) end
+				self.chrome = Chrome:new()
+				if opts.onRefresh then
+					self.chrome.refresh = function(s)
+						vim.fn.jobstart(opts.onRefresh)
+						s:cmd'refresh'
+					end
+				end
+				self.chrome:newApp(opts.url)
+			end
+			return self.chrome
+		end,
+	}
 end
 
 return M
