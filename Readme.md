@@ -5,6 +5,8 @@ We all know you can
 in your browser, but can you do it the other way around?
 Surprisingly, answer is YES :smile:
 
+![Video usage example](https://user-images.githubusercontent.com/41148612/192169781-7a260436-723c-4542-a62e-c6e847883529.mp4)
+
 ## Instalation
 
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
