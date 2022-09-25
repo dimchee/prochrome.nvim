@@ -29,7 +29,7 @@ local chrome = require'prochrome'.newApp {
 -- Function 'get' runs chrome and server if not already running
 -- (elm live server is automaticaly refreshing on change)
 vim.keymap.set(
-  'n', '<C-a>', function() chrome:get end,
+  'n', '<C-a>', function() chrome:get() end,
   { silent = true, desc = 'Start elm live server' }
 )
 ```
@@ -39,7 +39,7 @@ If you prefer compiling (or writing) to plain html files, we got you covered too
 local chrome = require'prochrome'.newApp {
   onRefresh = {'pandoc', 'Readme.md', '-o', 'Readme.html'},
   url = 'Readme.html'
-},
+}
 -- Function 'get' makes sure to run chrome
 -- and then 'refresh' (with pandoc hook) is ran
 vim.keymap.set(
@@ -62,7 +62,7 @@ Add binding to your lua config, and you are done:
 local chrome = require'prochrome'.newApp {
   cmd = {'gh', 'markdown-preview', '--disable-auto-open'},
   url = 'http://localhost:3333'
-},
+}
 vim.keymap.set(
   'n', '<C-a>', function() chrome:get() end,
   { silent = true, desc = 'Start github markdown preview' }

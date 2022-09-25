@@ -1,28 +1,25 @@
+name: Compiles binary, upload to release
 on:
   push:
-    tags:
-      - "v*"
-
+    branches: main
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -C target-feature=+crt-static
-
-
 jobs:
   release:
-    name: Release
-    runs-on: ubuntu-20.04
-    
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Build
-      run: cargo build --target x86_64-unknown-linux-gnu --release --verbose && mv ./target/x86_64-unknown-linux-gnu/release/prochrome .
-
-    - name: Upload
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: prochrome 
-        tag: ${{github.ref}}
-        overwrite: false
-        body: "Automated publish by Github Action"
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build
+        run: cargo build --target x86_64-unknown-linux-gnu --release --verbose
+      - name: Move
+        run: mv ./target/x86_64-unknown-linux-gnu/release/prochrome .
+      - name: Release
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: "latest"
+          prerelease: false
+          title: "Current binary"
+          files: prochrome
