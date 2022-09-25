@@ -28,6 +28,18 @@ function Chrome:navigateTo(url) return self:cmd('navigate_to', url) end
 local M = {}
 
 local function argsValid(opts)
+	for k, v in opts do
+		if k ~= 'onStart'
+			and k ~= 'onRefresh'
+			and k ~= 'url'
+		then
+			print[[need table arg of shape {
+				onStart : list<string>, -- optional
+				onRefresh : list<string>, -- optional
+				url : string 
+			}]]
+		end
+	end
 	if type(opts) ~= 'table'
 		or opts.onStart and type(opts.onStart) ~= 'table'
 		or opts.onRefresh and type(opts.onRefresh) ~= 'table'

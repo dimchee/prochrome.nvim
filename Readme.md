@@ -60,7 +60,7 @@ gh extension install yusukebe/gh-markdown-preview
 Add binding to your lua config, and you are done:
 ```lua
 local chrome = require'prochrome'.newApp {
-  cmd = {'gh', 'markdown-preview', '--disable-auto-open'},
+  onStart = {'gh', 'markdown-preview', '--disable-auto-open'},
   url = 'http://localhost:3333'
 }
 vim.keymap.set(
