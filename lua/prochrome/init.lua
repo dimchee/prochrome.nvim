@@ -64,8 +64,10 @@ function M.newApp(opts)
 				self.chrome = Chrome:new()
 				if opts.onRefresh then
 					self.chrome.refresh = function(s)
-						vim.fn.jobstart(opts.onRefresh)
-						s:cmd'refresh'
+						vim.fn.jobstart(
+							opts.onRefresh,
+							{ on_exit = function() s:cmd'refresh' end }
+						)
 					end
 				end
 				self.chrome:newApp(opts.url)

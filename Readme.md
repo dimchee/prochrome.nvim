@@ -40,7 +40,7 @@ If you prefer compiling (or writing) to plain html files, we got you covered too
 -- Setting everything up for running
 local chrome = require'prochrome'.newApp {
   onRefresh = {'pandoc', 'Readme.md', '-o', 'Readme.html'},
-  url = 'Readme.html'
+  url = 'file://' .. vim.fn.getcwd() .. '/Readme.html' 
 }
 -- Function 'get' makes sure to run chrome
 -- and then 'refresh' (with pandoc hook) is ran
