@@ -28,7 +28,7 @@ function Chrome:navigateTo(url) return self:cmd('navigate_to', url) end
 local M = {}
 
 local function argsValid(opts)
-	for k, v in opts do
+	for k, v in pairs(opts) do
 		if k ~= 'onStart'
 			and k ~= 'onRefresh'
 			and k ~= 'url'
