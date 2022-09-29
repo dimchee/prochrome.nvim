@@ -20,6 +20,7 @@ function Chrome:status()  return self:cmd'status'  end
 function Chrome:refresh() return self:cmd'refresh' end
 function Chrome:newApp(url) return self:cmd('new_app', url) end
 function Chrome:navigateTo(url) return self:cmd('navigate_to', url) end
+function Chrome:findElements(q) return self:cmd('find_elements', q) end
 -- Not usable yet, maybe even unnecesery
 -- function Chrome:newChrome(url) return self:cmd('new_chrome', url) end
 -- function Chrome:getTabs() return self:cmd'get_tabs' end
@@ -28,7 +29,7 @@ function Chrome:navigateTo(url) return self:cmd('navigate_to', url) end
 local M = {}
 
 local function argsValid(opts)
-	for k, v in pairs(opts) do
+	for k, _ in pairs(opts) do
 		if k ~= 'onStart'
 			and k ~= 'onRefresh'
 			and k ~= 'url'
@@ -75,6 +76,29 @@ function M.newApp(opts)
 			return self.chrome
 		end,
 	}
+end
+
+function M.codeforces()
+	return M.newApp {
+		url = 'https://codeforces.com/problemset/problem/1734/F'
+	}:get()
+end
+
+-- local function zip(a, b)
+-- 	if #a ~= #b then
+-- 		return {}
+-- 	end
+-- 	local sol = {}
+-- 	for i = 1, #a do
+-- 		table.insert(sol, {a[i], b[i]})
+-- 	end
+-- 	return sol
+-- end
+
+function M.cf_in_out()
+	return
+		cf:findElements'div.sample-test > div.input > pre',
+		cf:findElements'div.sample-test > div.output > pre'
 end
 
 return M

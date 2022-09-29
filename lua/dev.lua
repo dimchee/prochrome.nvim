@@ -9,6 +9,8 @@ vim.o.rtp = ".," .. vim.o.rtp
 vim.keymap.set('n', ',,,', '<cmd>luafile lua/dev.lua<cr>')
 
 Prochrome = require'prochrome'
+Cf = require'prochrome'.codeforces()
+
 
 -- vim.keymap.set('n', ',w', Notes.new_note)
 -- vim.keymap.set('n', ',R', function() Notes.add_all_virtual_titles(0) end)

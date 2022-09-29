@@ -94,6 +94,14 @@ impl Browser {
             .navigate_to(url).ok().ok_or("Could not navigate to url")?;
         Ok(())
     }
+    fn find_elements(&mut self, q: &str) -> Result<Vec<String>, String> {
+        let tabs = self.browser.as_ref()
+            .ok_or("No browser")?
+            .get_tabs().lock().ok().ok_or("Could not get tabs")?;
+        let tab = tabs.first().ok_or("No opened tabs available")?;
+        let els = tab.find_elements(q).ok().ok_or("Couldn't find elements")?;
+        Ok(els.iter().filter_map(|x| x.get_inner_text().ok()).collect::<Vec<_>>())
+    }
 }
 
 #[derive(Clone)]
@@ -171,6 +179,21 @@ impl Handler for EventHandler {
                     Err(Value::from("Wrong args to new_chrome, usage: new_app <url>"))
                 }
             },
+            "find_elements" => {
+                if let [Value::String(raw_q)] = &args[..] {
+                    let q = raw_q.as_str().ok_or(Value::from("Argument is not valid string!"))?;
+                    let mut tab = self.chrome
+                        .try_lock().map_err(|_| Value::from("Could not lock browser :P"))?;
+                    let elems = tab.find_elements(q)?;
+                    Ok(Value::from(
+                        elems.iter()
+                            .map(|x| Value::from(x.to_string()))
+                            .collect::<Vec<_>>()
+                    ))
+                } else {
+                    Err(Value::from("Wrong args to new_chrome, usage: find_elements <query>"))
+                }
+            }
             _ => {
                 Ok(Value::from("Unknown command!"))
             }
