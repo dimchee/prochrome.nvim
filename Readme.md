@@ -108,10 +108,7 @@ and let's make this thing work.
 
 ## Inspirations
 
-- [all started here](https://github.com/atroche/rust-headless-chrome)
-- [kind of vim version](https://github.com/carlosrocha/vim-chrome-devtools)
-- [bindings auto-gen in go](https://github.com/mafredri/cdp/tree/main/cmd/cdpgen)
-- [some](https://github.com/pyppeteer/pyppeteer)
-[python](https://github.com/fate0/pychrome)
-[implementations](https://github.com/iiSeymour/chromote)
-- [rust plugin example](https://github.com/michaelb/sniprun)
+- [All started here](https://github.com/atroche/rust-headless-chrome)
+- [Vim chrome devtools](https://github.com/carlosrocha/vim-chrome-devtools)
+- [Another rust plugin](https://github.com/michaelb/sniprun)
+- [markdown-preview.nvim](https://github.com/iamcco/markdown-preview.nvim)
