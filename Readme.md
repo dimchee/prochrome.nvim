@@ -15,6 +15,11 @@ use {'dimchee/prochrome.nvim', run = 'bash install.sh' }
 ```
 **Don't forget to install chrome or chromium!!!**
 
+Using `lazy.nvim`:
+```lua
+  { 'dimchee/prochrome.nvim' },
+```
+
 ## Usage
 
 ### Live Server
@@ -102,9 +107,6 @@ but i couldn't make it to work in this context.
 - [new tab](https://docs.rs/headless_chrome/latest/headless_chrome/browser/struct.Browser.html#method.new_tab)
 
 ## Contributing
-
-Please help! I can't do this alone. Just open a pull request,
-and let's make this thing work.
 
 ## Inspirations
 

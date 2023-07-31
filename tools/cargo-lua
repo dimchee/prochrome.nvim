@@ -1,0 +1,3 @@
+#!/bin/sh
+cargo build
+cp ./target/debug/libprochrome_internals.so ./lua/prochrome_internals.so
