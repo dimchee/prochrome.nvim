@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use headless_chrome::protocol::cdp::Target::CreateTarget;
 use nvim_oxi::{
     self as oxi,
     serde::{Deserializer, Serializer},
@@ -20,11 +23,13 @@ impl<E> From<std::sync::PoisonError<E>> for Error {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct Browser {
-    index: usize,
+impl oxi::lua::Poppable for Args {
+    unsafe fn pop(lstate: *mut oxi::lua::ffi::lua_State) -> Result<Self, oxi::lua::Error> {
+        let obj = Object::pop(lstate)?;
+        Self::deserialize(Deserializer::new(obj))
+            .map_err(oxi::lua::Error::pop_error_from_err::<Self, _>)
+    }
 }
-
 impl oxi::lua::Pushable for Browser {
     unsafe fn push(
         self,
@@ -35,12 +40,101 @@ impl oxi::lua::Pushable for Browser {
             .push(lstate)
     }
 }
-
 impl oxi::lua::Poppable for Browser {
     unsafe fn pop(lstate: *mut oxi::lua::ffi::lua_State) -> Result<Self, oxi::lua::Error> {
         let obj = Object::pop(lstate)?;
         Self::deserialize(Deserializer::new(obj))
             .map_err(oxi::lua::Error::pop_error_from_err::<Self, _>)
+    }
+}
+impl oxi::lua::Pushable for Tab {
+    unsafe fn push(
+        self,
+        lstate: *mut oxi::lua::ffi::lua_State,
+    ) -> Result<std::ffi::c_int, oxi::lua::Error> {
+        self.serialize(Serializer::new())
+            .map_err(oxi::lua::Error::push_error_from_err::<Self, _>)?
+            .push(lstate)
+    }
+}
+impl oxi::lua::Poppable for Tab {
+    unsafe fn pop(lstate: *mut oxi::lua::ffi::lua_State) -> Result<Self, oxi::lua::Error> {
+        let obj = Object::pop(lstate)?;
+        Self::deserialize(Deserializer::new(obj))
+            .map_err(oxi::lua::Error::pop_error_from_err::<Self, _>)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct Browser {
+    get_tabs: oxi::Function<Self, Vec<Tab>>,
+    new_tab: oxi::Function<(Self, String), Tab>,
+}
+impl Browser {
+    fn from_headless(browser: &headless_chrome::Browser) -> Self {
+        let b1 = browser.clone();
+        let b2 = browser.clone();
+        Self {
+            get_tabs: oxi::Function::from_fn(move |_: Browser| {
+                let tabs = b1
+                    .get_tabs()
+                    .lock()?
+                    .iter()
+                    .map(Tab::from_headless)
+                    .collect();
+                Ok::<_, Error>(tabs)
+            }),
+            new_tab: oxi::Function::from_fn(move |(_, url): (Browser, String)| {
+                let tab = b2.new_tab_with_options(CreateTarget {
+                    url,
+                    width: None,
+                    height: None,
+                    browser_context_id: None,
+                    enable_begin_frame_control: None,
+                    new_window: Some(false),
+                    background: None,
+                })?;
+                Ok::<_, Error>(Tab::from_headless(&tab))
+            }),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct Tab {
+    url: String,
+    title: Option<String>,
+    refresh: oxi::Function<Self, ()>,
+    navigate_to: oxi::Function<(Self, String), ()>,
+    find_elements: oxi::Function<(Self, String), Vec<String>>,
+}
+
+impl Tab {
+    fn from_headless(tab: &Arc<headless_chrome::Tab>) -> Self {
+        let tab1 = tab.clone();
+        let tab2 = tab.clone();
+        let tab3 = tab.clone();
+        Self {
+            url: tab.get_url(),
+            title: tab.get_title().ok(),
+            refresh: oxi::Function::from_fn(move |_: Tab| {
+                tab1.reload(true, None)?;
+                Ok::<_, Error>(())
+            }),
+            navigate_to: oxi::Function::from_fn(move |(_, url): (Tab, String)| {
+                tab2.navigate_to(&url)?;
+                Ok::<_, Error>(())
+            }),
+            find_elements: oxi::Function::from_fn(move |(_, query): (Tab, String)| {
+                // TODO Make element struct with methods
+                let els = tab3
+                    .find_elements(&query)?
+                    .iter()
+                    .filter_map(|x| x.get_inner_text().ok())
+                    .collect::<Vec<_>>();
+                Ok::<_, Error>(els)
+            }),
+        }
     }
 }
 
@@ -50,14 +144,7 @@ struct Args {
     url: String,
 }
 
-impl oxi::lua::Poppable for Args {
-    unsafe fn pop(lstate: *mut oxi::lua::ffi::lua_State) -> Result<Self, oxi::lua::Error> {
-        let obj = Object::pop(lstate)?;
-        Self::deserialize(Deserializer::new(obj))
-            .map_err(oxi::lua::Error::pop_error_from_err::<Self, _>)
-    }
-}
-
+#[derive(Clone)]
 struct BrowserManager {
     opened: Vec<headless_chrome::Browser>,
 }
@@ -66,9 +153,6 @@ impl BrowserManager {
     fn new() -> BrowserManager {
         Self { opened: vec![] }
     }
-    // fn get(&self, browser: Browser) -> headless_chrome::Browser {
-    //     self.opened[browser.index].clone()
-    // }
     fn open(&mut self, args: Args) -> Result<Browser, Error> {
         let url_opt = if args.is_app {
             std::ffi::OsString::from("--app=".to_string() + args.url.as_str())
@@ -87,32 +171,9 @@ impl BrowserManager {
             .build()
             .expect("Could not find chrome-executable");
         let browser = headless_chrome::Browser::new(opts)?;
-        // browser.new_tab_with_options(headless_chrome::protocol::cdp::Target::CreateTarget {
-        //     url: args.url,
-        //     width: None,
-        //     height: None,
-        //     browser_context_id: None,
-        //     enable_begin_frame_control: None,
-        //     new_window: None,
-        //     background: None,
-        // })?;
         self.opened.push(browser);
-        Ok(Browser {
-            index: self.opened.len() - 1,
-        })
+        Ok(Browser::from_headless(self.opened.last().unwrap()))
     }
-    // fn get_tabs(&self, browser: Browser) -> Result<Vec<String>, Error> {
-    //     Ok(self
-    //         .get(browser)
-    //         .get_tabs()
-    //         .lock()?
-    //         .iter()
-    //         .map(|t| t.get_url())
-    //         .collect())
-    // }
-    // fn refresh(&self, browser: Browser) -> Result<(), Error> {
-    //     self.get(browser).get_tabs().lock()?
-    // }
 }
 
 #[oxi::module]
