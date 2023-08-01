@@ -26,7 +26,7 @@ local function download()
   if jit.os == 'Linux' then
     Curl.get {
       url = 'https://github.com/dimchee/prochrome/releases/download/latest/prochrome_internals.so',
-      output = 'prochrome_internals.so',
+      output = 'lua/prochrome_internals.so',
     }
   else
     build()
