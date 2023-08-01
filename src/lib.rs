@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use headless_chrome::protocol::cdp::Target::CreateTarget;
 use nvim_oxi::{
@@ -17,8 +17,8 @@ enum Error {
     Lock,
 }
 
-impl<E> From<std::sync::PoisonError<E>> for Error {
-    fn from(_: std::sync::PoisonError<E>) -> Self {
+impl<E> From<std::sync::TryLockError<E>> for Error {
+    fn from(_: std::sync::TryLockError<E>) -> Self {
         Error::Lock
     }
 }
@@ -78,7 +78,7 @@ impl Browser {
             get_tabs: oxi::Function::from_fn(move |_: Browser| {
                 let tabs = b1
                     .get_tabs()
-                    .lock()?
+                    .try_lock()?
                     .iter()
                     .map(Tab::from_headless)
                     .collect();
@@ -105,6 +105,7 @@ struct Tab {
     url: String,
     title: Option<String>,
     refresh: oxi::Function<Self, ()>,
+    close: oxi::Function<Self, ()>,
     navigate_to: oxi::Function<(Self, String), ()>,
     find_elements: oxi::Function<(Self, String), Vec<String>>,
 }
@@ -114,11 +115,16 @@ impl Tab {
         let tab1 = tab.clone();
         let tab2 = tab.clone();
         let tab3 = tab.clone();
+        let tab4 = tab.clone();
         Self {
             url: tab.get_url(),
             title: tab.get_title().ok(),
             refresh: oxi::Function::from_fn(move |_: Tab| {
                 tab1.reload(true, None)?;
+                Ok::<_, Error>(())
+            }),
+            close: oxi::Function::from_fn(move |_: Tab| {
+                tab4.close(false)?;
                 Ok::<_, Error>(())
             }),
             navigate_to: oxi::Function::from_fn(move |(_, url): (Tab, String)| {
@@ -146,12 +152,14 @@ struct Args {
 
 #[derive(Clone)]
 struct BrowserManager {
-    opened: Vec<headless_chrome::Browser>,
+    opened: Arc<Mutex<Vec<headless_chrome::Browser>>>,
 }
 
 impl BrowserManager {
     fn new() -> BrowserManager {
-        Self { opened: vec![] }
+        Self {
+            opened: Arc::new(Mutex::new(vec![])),
+        }
     }
     fn open(&mut self, args: Args) -> Result<Browser, Error> {
         let url_opt = if args.is_app {
@@ -171,16 +179,31 @@ impl BrowserManager {
             .build()
             .expect("Could not find chrome-executable");
         let browser = headless_chrome::Browser::new(opts)?;
-        self.opened.push(browser);
-        Ok(Browser::from_headless(self.opened.last().unwrap()))
+        self.opened.try_lock()?.push(browser);
+        Ok(Browser::from_headless(
+            self.opened.try_lock()?.last().unwrap(), // always has at least one element
+        ))
     }
 }
 
 #[oxi::module]
 fn prochrome_internals() -> oxi::Result<Dictionary> {
     let mut bm = BrowserManager::new();
+    let bm1 = bm.clone();
 
     let open = Function::from_fn_mut(move |args: Args| bm.open(args));
+    let get_opened = Function::from_fn_mut(move |_: ()| {
+        Ok::<_, Error>(
+            bm1.opened
+                .try_lock()?
+                .iter()
+                .map(Browser::from_headless)
+                .collect::<Vec<_>>(),
+        )
+    });
 
-    Ok(Dictionary::from_iter([("open", open)]))
+    Ok(Dictionary::from_iter([
+        ("open", oxi::Object::from(open)),
+        ("get_opened", oxi::Object::from(get_opened)),
+    ]))
 }

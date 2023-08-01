@@ -11,7 +11,7 @@ https://user-images.githubusercontent.com/41148612/192169781-7a260436-723c-4542-
 
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
 ```lua
-use {'dimchee/prochrome.nvim', run = 'bash install.sh' }
+use {'dimchee/prochrome.nvim', run = ':luafile build.lua' }
 ```
 **Don't forget to install chrome or chromium!!!**
 
