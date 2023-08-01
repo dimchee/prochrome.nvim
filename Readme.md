@@ -35,9 +35,9 @@ You can run any [live server](https://www.npmjs.com/package/live-server), when y
 vim.api.nvim_create_autocmd('FileType', {
   pattern = { 'html', 'css', 'js', 'ts' },
   callback = function()
-    -- live-server is automaticaly refreshing on change
     vim.keymap.set('n', '<F5>', function()
-      require'prochrome'.open {
+      -- live-server is automaticaly refreshing on change
+      require('prochrome').open {
         is_app = true,
         on_start = { 'live-server', '--no-browser' },
         url = 'http://localhost:8080',
@@ -53,7 +53,7 @@ vim.api.nvim_create_autocmd('FileType', {
   pattern = 'elm',
   callback = function()
     vim.keymap.set('n', '<F5>', function()
-      require'prochrome'.open {
+      require('prochrome').open {
         is_app = true,
         on_start = { 'elm-live', 'src/Main.elm', '--', '--debug' },
         url = 'http://localhost:8000',
@@ -65,12 +65,8 @@ vim.api.nvim_create_autocmd('FileType', {
 If you prefer compiling (or writing) to plain html files, we got you covered too:
 ```lua
 -- Setting everything up for running
-local chrome = require'prochrome'.newApp {
-  onRefresh = {'pandoc', 'Readme.md', '-o', 'Readme.html'},
-  url = 'file://' .. vim.fn.getcwd() .. '/Readme.html' 
-}
 vim.keymap.set('n', '<F5>', function()
-  require'prochrome'.open {
+  require('prochrome').open {
     is_app = true,
     on_refresh = {'pandoc', 'Readme.md', '-o', 'Readme.html'},
     url = 'file://' .. vim.fn.getcwd() .. '/Readme.html' 
@@ -94,6 +90,7 @@ vim.api.nvim_create_autocmd('BufEnter', {
   callback = function()
     vim.keymap.set('n', '<F5>', function()
       require('prochrome').open {
+        is_app = true,
         on_start = { 'gh', 'markdown-preview', '--disable-auto-open' },
         url = 'http://localhost:3333',
       }
