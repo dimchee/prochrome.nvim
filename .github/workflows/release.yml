@@ -1,4 +1,4 @@
-name: Compiles binary, upload to release
+name: Compiles library, upload to release
 on:
   push:
     branches: main
@@ -12,14 +12,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build
-        run: cargo build --target x86_64-unknown-linux-gnu --release --verbose
+        run: cargo build --release --verbose
       - name: Move
-        run: mv ./target/x86_64-unknown-linux-gnu/release/prochrome .
+        run: mv ./target/release/libprochrome_internals.so prochrome_internals.so
       - name: Release
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           automatic_release_tag: "latest"
           prerelease: false
-          title: "Current binary"
-          files: prochrome
+          title: "Current library"
+          files: prochrome_internals.so
