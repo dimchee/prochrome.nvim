@@ -9,36 +9,58 @@ https://user-images.githubusercontent.com/41148612/192169781-7a260436-723c-4542-
 
 ## Instalation
 
+Before next step, you will **need** [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) already installed,
+so building step would work.
+
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
 ```lua
 use {'dimchee/prochrome.nvim', run = ':luafile build.lua' }
 ```
-**Don't forget to install chrome or chromium!!!**
 
 Using `lazy.nvim`:
 ```lua
   { 'dimchee/prochrome.nvim' },
 ```
 
+You don't need to add [`build` step to lazy](https://github.com/folke/lazy.nvim#-plugin-authors)
+
+**Don't forget to install chrome or chromium!!!**
+
 ## Usage
 
 ### Live Server
 
-You can run your favourite
-[live server tool](https://github.com/wking-io/elm-live) directly from prochrome.
-I recommend, for example adding following keymap to your `after/ftplugin/elm.lua` config file
+You can run any [live server](https://www.npmjs.com/package/live-server), when your chrome starts:
 ```lua
--- Setting everything up for running
-local chrome = require'prochrome'.newApp {
-  onStart = {'elm-live', 'src/Main.elm', '--', '--debug'},
-  url = 'http://localhost:8000'
-}
--- Function 'get' runs chrome and server if not already running
--- (elm live server is automaticaly refreshing on change)
-vim.keymap.set(
-  'n', '<C-a>', function() chrome:get() end,
-  { silent = true, desc = 'Start elm live server' }
-)
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = { 'html', 'css', 'js', 'ts' },
+  callback = function()
+    -- live-server is automaticaly refreshing on change
+    vim.keymap.set('n', '<F5>', function()
+      require'prochrome'.open {
+        is_app = true,
+        on_start = { 'live-server', '--no-browser' },
+        url = 'http://localhost:8080',
+      }
+    end, { silent = true, desc = 'Start live-server' })
+  end,
+})
+```
+For example, I have my favourite
+[live server tool](https://github.com/wking-io/elm-live) configured like this
+```lua
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'elm',
+  callback = function()
+    vim.keymap.set('n', '<F5>', function()
+      require'prochrome'.open {
+        is_app = true,
+        on_start = { 'elm-live', 'src/Main.elm', '--', '--debug' },
+        url = 'http://localhost:8000',
+      }
+    end, { silent = true, desc = 'Start elm-live' })
+  end,
+})
 ```
 If you prefer compiling (or writing) to plain html files, we got you covered too:
 ```lua
@@ -47,12 +69,13 @@ local chrome = require'prochrome'.newApp {
   onRefresh = {'pandoc', 'Readme.md', '-o', 'Readme.html'},
   url = 'file://' .. vim.fn.getcwd() .. '/Readme.html' 
 }
--- Function 'get' makes sure to run chrome
--- and then 'refresh' (with pandoc hook) is ran
-vim.keymap.set(
-  'n', '<C-a>', function() chrome:get():refresh() end,
-  { silent = true, desc = 'Start or refresh pandoc live server' }
-)
+vim.keymap.set('n', '<F5>', function()
+  require'prochrome'.open {
+    is_app = true,
+    on_refresh = {'pandoc', 'Readme.md', '-o', 'Readme.html'},
+    url = 'file://' .. vim.fn.getcwd() .. '/Readme.html' 
+  }
+end, { silent = true, desc = 'Start or refresh pandoc live server' })
 ```
 
 ### Preview Github Markdown
@@ -66,14 +89,17 @@ gh extension install yusukebe/gh-markdown-preview
 ```
 Add binding to your lua config, and you are done:
 ```lua
-local chrome = require'prochrome'.newApp {
-  onStart = {'gh', 'markdown-preview', '--disable-auto-open'},
-  url = 'http://localhost:3333'
-}
-vim.keymap.set(
-  'n', '<C-a>', function() chrome:get() end,
-  { silent = true, desc = 'Start github markdown preview' }
-)
+vim.api.nvim_create_autocmd('BufEnter', {
+  pattern = 'Readme.md',
+  callback = function()
+    vim.keymap.set('n', '<F5>', function()
+      require('prochrome').open {
+        on_start = { 'gh', 'markdown-preview', '--disable-auto-open' },
+        url = 'http://localhost:3333',
+      }
+    end, { silent = true, desc = 'Start github markdown preview' })
+  end,
+})
 ```
 
 ### View live Documentation
@@ -92,6 +118,7 @@ How to use cargo doc...
 - Open new chrome instance in app mode
 - Refresh current page
 - Change page (navigate to a page)
+- Find Dom Element
 
 ## Future Plans
 
