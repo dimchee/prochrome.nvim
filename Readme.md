@@ -14,12 +14,12 @@ so building step would work.
 
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
 ```lua
-use {'dimchee/prochrome.nvim', run = ':luafile build.lua' }
+use {'dimchee/prochrome.nvim', run = 'bash install.sh' }
 ```
 
 Using `lazy.nvim`:
 ```lua
-  { 'dimchee/prochrome.nvim' },
+  { 'dimchee/prochrome.nvim', build = 'bash install.sh'}
 ```
 
 You don't need to add [`build` step to lazy](https://github.com/folke/lazy.nvim#-plugin-authors)
