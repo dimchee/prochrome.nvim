@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-nvim-oxi = { version = "0.3", features = ["neovim-nightly"] }
+nvim-oxi = { version = "0.3", features = ["neovim-nightly", "test"] }
 headless_chrome = { git = "https://github.com/dimchee/rust-headless-chrome.git", default_features = false }
 thiserror = "1.0"
 anyhow = "1.0"

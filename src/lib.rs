@@ -15,6 +15,10 @@ enum Error {
     Browser(#[from] anyhow::Error),
     #[error("Couldn't lock")]
     Lock,
+    #[error(transparent)]
+    Lua(#[from] oxi::lua::Error),
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
 }
 
 impl<E> From<std::sync::TryLockError<E>> for Error {
@@ -64,6 +68,16 @@ impl oxi::lua::Poppable for Tab {
             .map_err(oxi::lua::Error::pop_error_from_err::<Self, _>)
     }
 }
+impl oxi::lua::Pushable for Element {
+    unsafe fn push(
+        self,
+        lstate: *mut oxi::lua::ffi::lua_State,
+    ) -> Result<std::ffi::c_int, oxi::lua::Error> {
+        self.serialize(Serializer::new())
+            .map_err(oxi::lua::Error::push_error_from_err::<Self, _>)?
+            .push(lstate)
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 struct Browser {
@@ -71,16 +85,17 @@ struct Browser {
     new_tab: oxi::Function<(Self, String), Tab>,
 }
 impl Browser {
-    fn from_headless(browser: &headless_chrome::Browser) -> Self {
+    fn from_headless(browser: &headless_chrome::Browser, on_refresh: Option<Cmd>) -> Self {
         let b1 = browser.clone();
         let b2 = browser.clone();
+        let or1 = on_refresh.clone();
         Self {
             get_tabs: oxi::Function::from_fn(move |_: Browser| {
                 let tabs = b1
                     .get_tabs()
                     .try_lock()?
                     .iter()
-                    .map(Tab::from_headless)
+                    .map(|t| Tab::from_headless(t, or1.clone()))
                     .collect();
                 Ok::<_, Error>(tabs)
             }),
@@ -94,7 +109,7 @@ impl Browser {
                     new_window: Some(false),
                     background: None,
                 })?;
-                Ok::<_, Error>(Tab::from_headless(&tab))
+                Ok::<_, Error>(Tab::from_headless(&tab, on_refresh.clone()))
             }),
         }
     }
@@ -104,14 +119,24 @@ impl Browser {
 struct Tab {
     url: String,
     title: Option<String>,
+    on_refresh: Option<Cmd>,
     refresh: oxi::Function<Self, ()>,
     close: oxi::Function<Self, ()>,
     navigate_to: oxi::Function<(Self, String), ()>,
-    find_elements: oxi::Function<(Self, String), Vec<String>>,
+    find_element: oxi::Function<(Self, String), Element>,
+}
+
+fn exec((cmd, args): Cmd) -> Result<(), Error> {
+    std::process::Command::new(cmd)
+        .args(args)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()?;
+    Ok(())
 }
 
 impl Tab {
-    fn from_headless(tab: &Arc<headless_chrome::Tab>) -> Self {
+    fn from_headless(tab: &Arc<headless_chrome::Tab>, on_refresh: Option<Cmd>) -> Self {
         let tab1 = tab.clone();
         let tab2 = tab.clone();
         let tab3 = tab.clone();
@@ -119,7 +144,11 @@ impl Tab {
         Self {
             url: tab.get_url(),
             title: tab.get_title().ok(),
-            refresh: oxi::Function::from_fn(move |_: Tab| {
+            on_refresh,
+            refresh: oxi::Function::from_fn(move |t: Tab| {
+                if let Some(on_refresh) = t.on_refresh {
+                    exec(on_refresh)?; // TODO error on `function() print'test' end`
+                }
                 tab1.reload(true, None)?;
                 Ok::<_, Error>(())
             }),
@@ -131,23 +160,33 @@ impl Tab {
                 tab2.navigate_to(&url)?;
                 Ok::<_, Error>(())
             }),
-            find_elements: oxi::Function::from_fn(move |(_, query): (Tab, String)| {
-                // TODO Make element struct with methods
-                let els = tab3
-                    .find_elements(&query)?
-                    .iter()
-                    .filter_map(|x| x.get_inner_text().ok())
-                    .collect::<Vec<_>>();
-                Ok::<_, Error>(els)
+            find_element: oxi::Function::from_fn(move |(_, query): (Tab, String)| {
+                // TODO slow, async?
+                let el = tab3.find_element(&query)?;
+                Ok::<_, Error>(Element {
+                    inner_text: el.get_inner_text().ok(),
+                    content: el.get_content().ok(),
+                })
             }),
         }
     }
 }
+// TODO lua callbacks for on_start and on_refresh
+// type Callback = oxi::Function<(), oxi::Object>;
+type Cmd = (String, Vec<String>);
+
+#[derive(Serialize)]
+struct Element {
+    inner_text: Option<String>,
+    content: Option<String>,
+}
 
 #[derive(Deserialize)]
 struct Args {
-    is_app: bool,
+    is_app: Option<bool>,
     url: String,
+    on_start: Option<Cmd>,
+    on_refresh: Option<Cmd>,
 }
 
 #[derive(Clone)]
@@ -162,26 +201,30 @@ impl BrowserManager {
         }
     }
     fn open(&mut self, args: Args) -> Result<Browser, Error> {
-        let url_opt = if args.is_app {
-            std::ffi::OsString::from("--app=".to_string() + args.url.as_str())
+        let is_app = if args.is_app.unwrap_or(false) {
+            std::ffi::OsString::from("--app=".to_string() + &args.url)
         } else {
-            std::ffi::OsString::from(&args.url)
+            std::ffi::OsString::from(args.url)
         };
+        //&url_opt, /*OsStr::new("--enable-experimental-ui-automation")*/
+        let chrome_args = vec![is_app]; //is_app.into_iter().collect::<Vec<_>>();
         let opts = headless_chrome::LaunchOptions::default_builder()
             .headless(false)
             .disable_default_args(true)
             .ignore_certificate_errors(false)
             // strange workaround for not-closing connection
             .idle_browser_timeout(std::time::Duration::new(u64::MAX, 0))
-            .args(vec![
-                &url_opt, /*OsStr::new("--enable-experimental-ui-automation")*/
-            ])
+            .args(chrome_args.iter().map(|x| x.as_os_str()).collect())
             .build()
             .expect("Could not find chrome-executable");
         let browser = headless_chrome::Browser::new(opts)?;
+        if let Some(on_start) = args.on_start {
+            exec(on_start)?;
+        }
         self.opened.try_lock()?.push(browser);
         Ok(Browser::from_headless(
             self.opened.try_lock()?.last().unwrap(), // always has at least one element
+            args.on_refresh,
         ))
     }
 }
@@ -197,7 +240,7 @@ fn prochrome_internals() -> oxi::Result<Dictionary> {
             bm1.opened
                 .try_lock()?
                 .iter()
-                .map(Browser::from_headless)
+                .map(|b| Browser::from_headless(b, None))
                 .collect::<Vec<_>>(),
         )
     });
@@ -207,3 +250,6 @@ fn prochrome_internals() -> oxi::Result<Dictionary> {
         ("get_opened", oxi::Object::from(get_opened)),
     ]))
 }
+
+#[oxi::test]
+fn call_lua_function() {}
