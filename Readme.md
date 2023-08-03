@@ -104,16 +104,32 @@ vim.api.nvim_create_autocmd('BufEnter', {
 It is convenient to use documentation directly from your editor, but browser looks better.
 Why not mix them?
 ```lua
+Path = require 'plenary.path'
+-- Simple regex magic for finding rust project name
+local function get_rust_project_name()
+  local file, text = io.open('Cargo.toml', 'rb')
+  if file then
+    text = file:read '*a'
+    file:close()
+  end
+  local _, _, name = text:find '%[package%][^%[]*name%s*=%s*"(.-)"'
+  return name
+end
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'rust',
   callback = function()
     vim.keymap.set('n', '<F5>', function()
       require('prochrome').open {
+        is_app = true,
         on_start = { 'cargo', 'doc' },
-        url = './target/doc/' .. require('prochrome').get_rust_project_name() .. '/index.html',
+        url = 'file://' .. Path:new('./target/doc/')
+          :joinpath(get_rust_project_name())
+          :joinpath('/index.html')
+          :expand(),
       }
-    end, { silent = true, desc = 'Start live-server' })
+    end, { silent = true, desc = 'Start doc browser' })
   end,
+})
 ```
 
 ### Look web through telescope

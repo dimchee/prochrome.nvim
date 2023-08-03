@@ -121,6 +121,7 @@ struct Tab {
     title: Option<String>,
     on_refresh: Option<Cmd>,
     refresh: oxi::Function<Self, ()>,
+    // focus: oxi::Function<Self, ()>,
     close: oxi::Function<Self, ()>,
     navigate_to: oxi::Function<(Self, String), ()>,
     find_element: oxi::Function<(Self, String), Element>,
@@ -141,6 +142,7 @@ impl Tab {
         let tab2 = tab.clone();
         let tab3 = tab.clone();
         let tab4 = tab.clone();
+        let tab5 = tab.clone();
         Self {
             url: tab.get_url(),
             title: tab.get_title().ok(),
@@ -152,6 +154,9 @@ impl Tab {
                 tab1.reload(true, None)?;
                 Ok::<_, Error>(())
             }),
+            // focus: oxi::Function::from_fn(move |_: Tab| {
+            //     tab5.
+            // }),
             close: oxi::Function::from_fn(move |_: Tab| {
                 tab4.close(false)?;
                 Ok::<_, Error>(())
