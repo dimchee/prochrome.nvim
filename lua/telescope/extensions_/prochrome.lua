@@ -37,7 +37,11 @@ end
 return require('telescope').register_extension {
   exports = {
     focus_tab = function(opts)
-      focus_tab(opts, require 'prochrome')
+      local chromes = require('prochrome').get_opened()
+      local chrome = chromes and chromes[#chromes]
+      if chrome then
+        focus_tab(opts, chrome)
+      end
     end,
   },
 }
