@@ -10,7 +10,7 @@ M.open = function(args)
     args.on_refresh = { table.remove(args.on_refresh, 1), args.on_refresh }
   end
   -- print('args: ', vim.inspect(args))
-  Internals.open(args)
+  return Internals.open(args)
 end
 
 return M
