@@ -1,1 +1,1 @@
-env NVIM_APPNAME=foobar nvim -c 'set rtp+=. | luafile tools/dev.lua'
+env NVIM_APPNAME=nvimTestingEnv nvim -c 'set rtp+=. | luafile tools/dev.lua'

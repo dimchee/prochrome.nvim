@@ -134,9 +134,17 @@ vim.api.nvim_create_autocmd('FileType', {
 
 ### Look web through telescope
 
+For telescope integration, you will need to load prochrome telescope extension
+```lua
+require('telescope').load_extension'prochrome'
+```
 #### Change tab from telescope
 
-- telescope.nvim + prochrome.nvim = caboom
+Now you can, for example, change tab in your browser from inside of nvim
+```
+:Telescope prochrome focus_tab<CR>
+```
+
 - Implement google search + telescope
 
 ## Features
