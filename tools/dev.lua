@@ -12,3 +12,10 @@ Prochrome = require 'prochrome'
 --   end,
 -- }
 -- T = A:new_tab 'https://github.com/dimchee'
+
+vim.keymap.set('n', '<F5>', function()
+  require('prochrome').open {
+    on_start = { 'cargo', 'doc' },
+    url = './target/doc/' .. require('prochrome').get_rust_project_name(),
+  }
+end, { silent = true, desc = 'Start live-server' })

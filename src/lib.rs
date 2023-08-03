@@ -251,5 +251,5 @@ fn prochrome_internals() -> oxi::Result<Dictionary> {
     ]))
 }
 
-#[oxi::test]
-fn call_lua_function() {}
+// #[oxi::test]
+// fn call_lua_function() {}

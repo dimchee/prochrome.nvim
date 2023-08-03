@@ -101,7 +101,20 @@ vim.api.nvim_create_autocmd('BufEnter', {
 
 ### View live Documentation
 
-How to use cargo doc...
+It is convenient to use documentation directly from your editor, but browser looks better.
+Why not mix them?
+```lua
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'rust',
+  callback = function()
+    vim.keymap.set('n', '<F5>', function()
+      require('prochrome').open {
+        on_start = { 'cargo', 'doc' },
+        url = './target/doc/' .. require('prochrome').get_rust_project_name() .. '/index.html',
+      }
+    end, { silent = true, desc = 'Start live-server' })
+  end,
+```
 
 ### Look web through telescope
 
