@@ -121,7 +121,7 @@ struct Tab {
     title: Option<String>,
     on_refresh: Option<Cmd>,
     refresh: oxi::Function<Self, ()>,
-    // focus: oxi::Function<Self, ()>,
+    focus: oxi::Function<Self, ()>,
     close: oxi::Function<Self, ()>,
     navigate_to: oxi::Function<(Self, String), ()>,
     find_element: oxi::Function<(Self, String), Element>,
@@ -154,9 +154,10 @@ impl Tab {
                 tab1.reload(true, None)?;
                 Ok::<_, Error>(())
             }),
-            // focus: oxi::Function::from_fn(move |_: Tab| {
-            //     tab5.
-            // }),
+            focus: oxi::Function::from_fn(move |_: Tab| {
+                tab5.bring_to_front()?; // TODO or `tab5.activate()?;`
+                Ok::<_, Error>(())
+            }),
             close: oxi::Function::from_fn(move |_: Tab| {
                 tab4.close(false)?;
                 Ok::<_, Error>(())
